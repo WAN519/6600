@@ -6,11 +6,42 @@ import plotly.express as px
 st.set_page_config(page_title="全球温室气体排放仪表盘", layout="wide")
 
 
+# 列名候选映射（兼容 OECD 不同导出格式）
+COUNTRY_CANDIDATES   = ['Reference area', 'REF_AREA', 'Country', 'LOCATION', 'country']
+YEAR_CANDIDATES      = ['TIME_PERIOD', 'Time period', 'Year', 'TIME', 'year']
+EMISSION_CANDIDATES  = ['OBS_VALUE', 'Observation value', 'Value', 'Emissions', 'value']
+
+
+def _find_col(columns, candidates):
+    for c in candidates:
+        if c in columns:
+            return c
+    return None
+
+
 # 加载数据集
 @st.cache_data
 def load_data():
     df = pd.read_csv('OECD.ENV.EPI,DSD_AIR_GHG@DF_AIR_GHG,+.A.GHG._T.KG_CO2E_PS.csv')
-    df = df[['Reference area', 'Time period', 'Observation value']].copy()
+
+    cols = df.columns.tolist()
+    country_col   = _find_col(cols, COUNTRY_CANDIDATES)
+    year_col      = _find_col(cols, YEAR_CANDIDATES)
+    emission_col  = _find_col(cols, EMISSION_CANDIDATES)
+
+    # 列名未匹配时提示实际列名，方便排查
+    if not all([country_col, year_col, emission_col]):
+        missing = {
+            'Country 列': country_col,
+            'Year 列':    year_col,
+            'Emissions 列': emission_col,
+        }
+        raise KeyError(
+            f"CSV 列名未匹配，实际列名为：{cols}\n"
+            f"匹配结果：{missing}"
+        )
+
+    df = df[[country_col, year_col, emission_col]].copy()
     df.columns = ['Country', 'Year', 'Emissions']
 
     # 处理 NaN 值
@@ -122,3 +153,5 @@ try:
 
 except FileNotFoundError:
     st.error("错误：未找到数据集文件。请确保 CSV 文件与 app.py 在同一文件夹内。")
+except KeyError as e:
+    st.error(f"CSV 列名不匹配，请检查：\n\n{e}")
