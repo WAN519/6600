@@ -2,14 +2,11 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# 设置页面配置
-st.set_page_config(page_title="全球温室气体排放仪表盘", layout="wide")
+st.set_page_config(page_title="Global Greenhouse Gas Emissions Dashboard", layout="wide")
 
-
-# 列名候选映射（兼容 OECD 不同导出格式）
-COUNTRY_CANDIDATES   = ['Reference area', 'REF_AREA', 'Country', 'LOCATION', 'country']
-YEAR_CANDIDATES      = ['TIME_PERIOD', 'Time period', 'Year', 'TIME', 'year']
-EMISSION_CANDIDATES  = ['OBS_VALUE', 'Observation value', 'Value', 'Emissions', 'value']
+COUNTRY_CANDIDATES  = ['Reference area', 'REF_AREA', 'Country', 'LOCATION', 'country']
+YEAR_CANDIDATES     = ['TIME_PERIOD', 'Time period', 'Year', 'TIME', 'year']
+EMISSION_CANDIDATES = ['OBS_VALUE', 'Observation value', 'Value', 'Emissions', 'value']
 
 
 def _find_col(columns, candidates):
@@ -19,32 +16,29 @@ def _find_col(columns, candidates):
     return None
 
 
-# 加载数据集
 @st.cache_data
 def load_data():
     df = pd.read_csv('OECD.ENV.EPI,DSD_AIR_GHG@DF_AIR_GHG,+.A.GHG._T.KG_CO2E_PS.csv')
 
     cols = df.columns.tolist()
-    country_col   = _find_col(cols, COUNTRY_CANDIDATES)
-    year_col      = _find_col(cols, YEAR_CANDIDATES)
-    emission_col  = _find_col(cols, EMISSION_CANDIDATES)
+    country_col  = _find_col(cols, COUNTRY_CANDIDATES)
+    year_col     = _find_col(cols, YEAR_CANDIDATES)
+    emission_col = _find_col(cols, EMISSION_CANDIDATES)
 
-    # 列名未匹配时提示实际列名，方便排查
     if not all([country_col, year_col, emission_col]):
         missing = {
-            'Country 列': country_col,
-            'Year 列':    year_col,
-            'Emissions 列': emission_col,
+            'Country column': country_col,
+            'Year column':    year_col,
+            'Emissions column': emission_col,
         }
         raise KeyError(
-            f"CSV 列名未匹配，实际列名为：{cols}\n"
-            f"匹配结果：{missing}"
+            f"CSV column names did not match. Actual columns: {cols}\n"
+            f"Match result: {missing}"
         )
 
     df = df[[country_col, year_col, emission_col]].copy()
     df.columns = ['Country', 'Year', 'Emissions']
 
-    # 处理 NaN 值
     df['Emissions'] = pd.to_numeric(df['Emissions'], errors='coerce')
     df['Year'] = pd.to_numeric(df['Year'], errors='coerce')
     df.dropna(subset=['Country', 'Year', 'Emissions'], inplace=True)
@@ -57,63 +51,57 @@ try:
     df = load_data()
 
     if df.empty:
-        st.warning("数据集加载后为空，请检查数据文件内容。")
+        st.warning("The dataset is empty after loading. Please check the data file.")
         st.stop()
 
-    # --- 侧边栏交互设置 ---
-    st.sidebar.header("筛选选项")
+    # --- Sidebar ---
+    st.sidebar.header("Filters")
 
-    # 国家多选
     all_countries = sorted(df['Country'].dropna().unique())
     default_countries = [c for c in ['Australia', 'Canada', 'Germany', 'France', 'United Kingdom']
                          if c in all_countries]
     selected_countries = st.sidebar.multiselect(
-        "选择国家/地区",
+        "Select Countries",
         options=all_countries,
         default=default_countries if default_countries else all_countries[:5]
     )
 
-    # 年份范围滑块
     min_year, max_year = int(df['Year'].min()), int(df['Year'].max())
     if min_year == max_year:
         year_range = (min_year, max_year)
-        st.sidebar.info(f"数据仅包含 {min_year} 年")
+        st.sidebar.info(f"Data only contains year {min_year}")
     else:
-        year_range = st.sidebar.slider("选择时间范围", min_year, max_year, (min_year, max_year))
+        year_range = st.sidebar.slider("Select Year Range", min_year, max_year, (min_year, max_year))
 
-    # 过滤数据
     filtered_df = df[
         (df['Country'].isin(selected_countries)) &
         (df['Year'] >= year_range[0]) &
         (df['Year'] <= year_range[1])
     ].copy()
 
-    # 再次去除过滤后可能残留的 NaN
     filtered_df.dropna(subset=['Emissions'], inplace=True)
 
-    # --- 主界面布局 ---
-    st.title("🌍 温室气体排放交互式可视化")
+    # --- Main Layout ---
+    st.title("🌍 Global Greenhouse Gas Emissions Dashboard")
     st.markdown(
-        f"本应用根据作业 5 要求构建，旨在探索 **{year_range[0]} - {year_range[1]}** 期间各国的人均温室气体排放量。")
+        f"This app visualises per-capita greenhouse gas emissions from **{year_range[0]}** to **{year_range[1]}**.")
 
-    # 关键指标卡片 (Metrics)
     col1, col2, col3 = st.columns(3)
     if not filtered_df.empty and filtered_df['Emissions'].notna().any():
         avg_emission = filtered_df['Emissions'].mean()
         valid_emissions = filtered_df.dropna(subset=['Emissions'])
         max_idx = valid_emissions['Emissions'].idxmax()
         max_country = valid_emissions.loc[max_idx, 'Country']
-        col1.metric("平均排放量 (kg/人)", f"{avg_emission:.2f}")
-        col2.metric("选定范围最高排放国家", max_country)
-        col3.metric("选定记录数", len(filtered_df))
+        col1.metric("Avg Emissions (kg/person)", f"{avg_emission:.2f}")
+        col2.metric("Highest Emitter (selected)", max_country)
+        col3.metric("Records Selected", len(filtered_df))
     else:
-        st.warning("当前筛选条件下没有有效数据，请调整筛选选项。")
+        st.warning("No valid data for the current filters. Please adjust your selection.")
 
-    # 图表展示
-    tab1, tab2 = st.tabs(["趋势图 (Line Chart)", "分布对比 (Bar Chart)"])
+    tab1, tab2 = st.tabs(["Trend (Line Chart)", "Comparison (Bar Chart)"])
 
     with tab1:
-        st.subheader("人均排放量随时间的变化趋势")
+        st.subheader("Per-Capita Emissions Over Time")
         if not filtered_df.empty:
             fig_line = px.line(
                 filtered_df,
@@ -121,15 +109,15 @@ try:
                 y="Emissions",
                 color="Country",
                 markers=True,
-                labels={"Emissions": "排放量 (kg CO2e/人)", "Year": "年份"},
-                title="年度排放趋势"
+                labels={"Emissions": "Emissions (kg CO2e/person)", "Year": "Year"},
+                title="Annual Emissions Trend"
             )
             st.plotly_chart(fig_line, use_container_width=True)
         else:
-            st.info("暂无数据可显示，请调整筛选条件。")
+            st.info("No data to display. Please adjust your filters.")
 
     with tab2:
-        st.subheader("各国排放量横向对比")
+        st.subheader("Average Emissions by Country")
         if not filtered_df.empty:
             bar_df = filtered_df.groupby('Country')['Emissions'].mean().dropna().reset_index()
             if not bar_df.empty:
@@ -138,20 +126,19 @@ try:
                     x="Country",
                     y="Emissions",
                     color="Country",
-                    labels={"Emissions": "平均排放量 (kg CO2e/人)"},
-                    title=f"选定年份区间内各国的平均排放水平"
+                    labels={"Emissions": "Avg Emissions (kg CO2e/person)"},
+                    title="Average Emissions by Country for Selected Period"
                 )
                 st.plotly_chart(fig_bar, use_container_width=True)
             else:
-                st.info("暂无数据可显示，请调整筛选条件。")
+                st.info("No data to display. Please adjust your filters.")
         else:
-            st.info("暂无数据可显示，请调整筛选条件。")
+            st.info("No data to display. Please adjust your filters.")
 
-    # 显示原始数据
-    with st.expander("查看过滤后的原始数据表"):
+    with st.expander("View Raw Data"):
         st.dataframe(filtered_df, use_container_width=True)
 
 except FileNotFoundError:
-    st.error("错误：未找到数据集文件。请确保 CSV 文件与 app.py 在同一文件夹内。")
+    st.error("Error: Data file not found. Please make sure the CSV file is in the same folder as app.py.")
 except KeyError as e:
-    st.error(f"CSV 列名不匹配，请检查：\n\n{e}")
+    st.error(f"CSV column mismatch. Details:\n\n{e}")
