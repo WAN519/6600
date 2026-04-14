@@ -287,7 +287,6 @@ try:
                     yaxis=dict(
                         **AXIS_STYLE,
                         title="",
-                        tickfont=dict(size=12),
                     ),
                     showlegend=False,
                 )
