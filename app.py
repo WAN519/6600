@@ -178,11 +178,13 @@ try:
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Avg Emissions (kg/person)", f"{avg_emission:,.1f}",
                   delta=f"{trend_delta:+.1f} vs {year_range[0]}" if trend_delta is not None else None,
-                  delta_color="inverse")
+                  delta_color="off")
         c2.metric("Highest Emitter", max_row["Country"],
-                  delta=f"{max_row['Emissions']:,.0f} kg/person")
+                  delta=f"{max_row['Emissions']:,.0f} kg/person",
+                  delta_color="off")
         c3.metric("Lowest Emitter", min_row["Country"],
-                  delta=f"{min_row['Emissions']:,.0f} kg/person")
+                  delta=f"{min_row['Emissions']:,.0f} kg/person",
+                  delta_color="off")
         c4.metric("Data Points", f"{len(filtered_df):,}")
     else:
         st.warning("No valid data for the current filters. Please adjust your selection.")
@@ -356,19 +358,19 @@ Unit: kg CO₂-equivalent per person · Coverage: OECD member countries, annual.
 
     with st.expander("4 · Development Process"):
         st.markdown("""
-**Estimated time: ~4.5 people-hours**
+**Estimated time: ~12 people-hours**
 
 | Phase | Hours |
 |-------|-------|
-| Data exploration & cleaning | 0.5 h |
-| Initial prototype | 1.0 h |
-| Visual redesign (theme, palette, layout) | 1.5 h |
-| Interaction & KPI improvements | 1.0 h |
-| Write-up | 0.5 h |
+| Data exploration & cleaning | 2.0 h |
+| Building charts & interactions | 5.0 h |
+| Visual redesign (layout, palette, CSS) | 3.5 h |
+| Write-up & documentation | 1.5 h |
+| **Total** | **~12 h** |
 
 **What took the most time?**
 
-The visual redesign took the longest. Switching from Plotly Express to `graph_objects` was necessary to control line width, marker style, and the unified hover tooltip, but required rewriting each chart from scratch. Keeping the custom CSS consistent across Streamlit's internal component structure was also time-consuming.
+Building the charts took the most time. Switching from Plotly Express to `graph_objects` was necessary to control line width, marker style, and the unified hover tooltip, but required rewriting each chart from scratch. The visual redesign also took considerable effort — getting the colour palette, layout, and custom CSS to work consistently across Streamlit's component structure required a lot of iteration.
         """)
 
 except FileNotFoundError:
