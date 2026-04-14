@@ -9,76 +9,53 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Custom CSS ────────────────────────────────────────────────────────────────
+# ── Custom CSS (light theme) ──────────────────────────────────────────────────
 st.markdown("""
 <style>
-/* Page background */
-[data-testid="stAppViewContainer"] {
-    background: linear-gradient(135deg, #0f1117 0%, #1a1d2e 100%);
-}
-[data-testid="stSidebar"] {
-    background: #161825;
-}
-
 /* Metric cards */
 [data-testid="metric-container"] {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.10);
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
     border-radius: 12px;
     padding: 18px 20px;
-    backdrop-filter: blur(10px);
 }
 [data-testid="metric-container"] label {
-    color: #9ca3af !important;
+    color: #64748b !important;
     font-size: 0.78rem;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
 }
 [data-testid="metric-container"] [data-testid="stMetricValue"] {
-    font-size: 1.7rem;
+    font-size: 1.6rem;
     font-weight: 700;
-    color: #f1f5f9 !important;
+    color: #0f172a !important;
 }
 
 /* Tab styling */
 [data-testid="stTabs"] button {
     font-weight: 600;
-    color: #9ca3af;
-}
-[data-testid="stTabs"] button[aria-selected="true"] {
-    color: #60a5fa;
-    border-bottom-color: #60a5fa !important;
 }
 
 /* Expander */
 [data-testid="stExpander"] {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid #e2e8f0;
     border-radius: 10px;
 }
-
-/* Sidebar header */
-[data-testid="stSidebar"] h2 {
-    color: #e2e8f0;
-}
-
-/* Divider colour */
-hr { border-color: rgba(255,255,255,0.08); }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Colour palette (10 perceptually distinct, dark-bg friendly) ───────────────
+# ── Colour palette (works well on white background) ───────────────────────────
 PALETTE = [
-    "#60a5fa",  # blue
-    "#34d399",  # emerald
-    "#f87171",  # red
-    "#fbbf24",  # amber
-    "#a78bfa",  # violet
-    "#38bdf8",  # sky
-    "#fb923c",  # orange
-    "#4ade80",  # green
-    "#e879f9",  # fuchsia
-    "#94a3b8",  # slate
+    "#2563eb",  # blue
+    "#16a34a",  # green
+    "#dc2626",  # red
+    "#d97706",  # amber
+    "#7c3aed",  # violet
+    "#0891b2",  # cyan
+    "#ea580c",  # orange
+    "#0d9488",  # teal
+    "#db2777",  # pink
+    "#64748b",  # slate
 ]
 
 COUNTRY_CANDIDATES  = ["Reference area", "REF_AREA", "Country", "LOCATION", "country"]
@@ -116,27 +93,23 @@ def load_data():
     return df
 
 
-# ── Plotly dark theme base ────────────────────────────────────────────────────
+# ── Plotly light theme base ───────────────────────────────────────────────────
+AXIS_STYLE = dict(
+    gridcolor="#e2e8f0",
+    zerolinecolor="#cbd5e1",
+    tickfont=dict(size=11, color="#475569"),
+)
+
 CHART_LAYOUT = dict(
-    paper_bgcolor="rgba(0,0,0,0)",
-    plot_bgcolor="rgba(255,255,255,0.03)",
-    font=dict(family="Inter, system-ui, sans-serif", color="#cbd5e1"),
-    title_font=dict(size=16, color="#f1f5f9"),
+    paper_bgcolor="white",
+    plot_bgcolor="white",
+    font=dict(family="Inter, system-ui, sans-serif", color="#334155"),
+    title_font=dict(size=16, color="#0f172a"),
     legend=dict(
-        bgcolor="rgba(255,255,255,0.05)",
-        bordercolor="rgba(255,255,255,0.10)",
+        bgcolor="#f8fafc",
+        bordercolor="#e2e8f0",
         borderwidth=1,
-        font=dict(size=12),
-    ),
-    xaxis=dict(
-        gridcolor="rgba(255,255,255,0.06)",
-        zerolinecolor="rgba(255,255,255,0.12)",
-        tickfont=dict(size=11),
-    ),
-    yaxis=dict(
-        gridcolor="rgba(255,255,255,0.06)",
-        zerolinecolor="rgba(255,255,255,0.12)",
-        tickfont=dict(size=11),
+        font=dict(size=12, color="#334155"),
     ),
     margin=dict(l=60, r=30, t=60, b=60),
 )
@@ -184,16 +157,10 @@ try:
     filtered_df.dropna(subset=["Emissions"], inplace=True)
 
     # ── Header ────────────────────────────────────────────────────────────────
+    st.markdown("# 🌍 Global Greenhouse Gas Emissions")
     st.markdown(
-        "<h1 style='color:#f1f5f9;font-size:2rem;font-weight:800;margin-bottom:0'>🌍 Global Greenhouse Gas Emissions</h1>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f"<p style='color:#94a3b8;margin-top:4px'>Per-capita emissions · "
-        f"<b style='color:#60a5fa'>{year_range[0]}</b> – "
-        f"<b style='color:#60a5fa'>{year_range[1]}</b> · "
-        f"{len(selected_countries)} countr{'y' if len(selected_countries)==1 else 'ies'} selected</p>",
-        unsafe_allow_html=True,
+        f"Per-capita emissions · **{year_range[0]}** – **{year_range[1]}** · "
+        f"{len(selected_countries)} countr{'y' if len(selected_countries)==1 else 'ies'} selected"
     )
     st.markdown("---")
 
@@ -204,7 +171,6 @@ try:
         max_row = valid.loc[valid["Emissions"].idxmax()]
         min_row = valid.loc[valid["Emissions"].idxmin()]
 
-        # Trend: compare first vs last year avg
         first_yr = filtered_df[filtered_df["Year"] == year_range[0]]["Emissions"].mean()
         last_yr  = filtered_df[filtered_df["Year"] == year_range[1]]["Emissions"].mean()
         trend_delta = None if pd.isna(first_yr) or pd.isna(last_yr) else round(last_yr - first_yr, 2)
@@ -228,7 +194,6 @@ try:
 
     with tab1:
         if not filtered_df.empty:
-            # Build traces manually for full styling control
             fig_line = go.Figure()
             countries = filtered_df["Country"].unique()
 
@@ -242,7 +207,7 @@ try:
                     mode="lines+markers",
                     line=dict(width=2.5, color=colour),
                     marker=dict(size=6, color=colour,
-                                line=dict(width=1.5, color="#1a1d2e")),
+                                line=dict(width=1.5, color="white")),
                     hovertemplate=(
                         f"<b>{country}</b><br>"
                         "Year: %{x}<br>"
@@ -255,14 +220,14 @@ try:
                 **CHART_LAYOUT,
                 title="Per-Capita GHG Emissions Over Time",
                 xaxis=dict(
-                    **CHART_LAYOUT["xaxis"],
+                    **AXIS_STYLE,
                     title="Year",
                     dtick=5,
                     rangeselector=dict(
-                        bgcolor="rgba(255,255,255,0.05)",
-                        activecolor="rgba(96,165,250,0.3)",
-                        bordercolor="rgba(255,255,255,0.10)",
-                        font=dict(color="#cbd5e1", size=11),
+                        bgcolor="#f1f5f9",
+                        activecolor="#dbeafe",
+                        bordercolor="#e2e8f0",
+                        font=dict(color="#334155", size=11),
                         buttons=[
                             dict(count=10, label="10Y", step="year", stepmode="backward"),
                             dict(count=20, label="20Y", step="year", stepmode="backward"),
@@ -273,7 +238,7 @@ try:
                     rangeslider=dict(visible=False),
                 ),
                 yaxis=dict(
-                    **CHART_LAYOUT["yaxis"],
+                    **AXIS_STYLE,
                     title="Emissions (kg CO₂e/person)",
                 ),
                 hovermode="x unified",
@@ -309,18 +274,18 @@ try:
                     ),
                     text=bar_df["Emissions"].apply(lambda v: f"{v:,.0f}"),
                     textposition="outside",
-                    textfont=dict(color="#94a3b8", size=11),
+                    textfont=dict(color="#64748b", size=11),
                 ))
 
                 fig_bar.update_layout(
                     **CHART_LAYOUT,
                     title=f"Average Per-Capita Emissions · {year_range[0]}–{year_range[1]}",
                     xaxis=dict(
-                        **CHART_LAYOUT["xaxis"],
+                        **AXIS_STYLE,
                         title="Avg Emissions (kg CO₂e/person)",
                     ),
                     yaxis=dict(
-                        **CHART_LAYOUT["yaxis"],
+                        **AXIS_STYLE,
                         title="",
                         tickfont=dict(size=12),
                     ),
@@ -343,11 +308,7 @@ try:
 
     # ── Write-up ──────────────────────────────────────────────────────────────
     st.markdown("---")
-    st.markdown(
-        "<h2 style='color:#f1f5f9;font-size:1.4rem;font-weight:700;margin-bottom:4px'>"
-        "📝 Project Write-up</h2>",
-        unsafe_allow_html=True,
-    )
+    st.markdown("## 📝 Project Write-up")
 
     with st.expander("1 · Research Question", expanded=True):
         st.markdown("""
@@ -364,7 +325,7 @@ It uses per-capita figures (kg CO₂e/person) rather than absolute totals so tha
 |-------|--------|-----|
 | Line chart | Position (x = year, y = emissions) + colour per country | Best channel for showing change over time; markers highlight individual data points where gaps may exist. |
 | Horizontal bar chart | Bar length + sorted ascending | Rank is immediately readable; horizontal layout avoids rotating long country names. |
-| Dark theme + distinct palette | Low-luminance background, 10 hues | Reduces eye strain; colours pop more clearly against a dark canvas. |
+| Distinct colour palette | 10 perceptually separated hues | Colours remain distinguishable when multiple countries are selected simultaneously. |
 
 **Interaction techniques**
 
